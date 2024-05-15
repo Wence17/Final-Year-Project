@@ -10,14 +10,23 @@ import AppContext from "../context/AppContext";
 import tracking from "../context/TrackPharma.json";
 import Web3Modal from "web3modal";
 import { ethers, Contract, Signer } from "ethers";
+import { UserContext } from "../components/UserContext";
 
 const PHARMA_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const PHARMA_ABI = tracking.abi;
 
 function ProductIndex() {
-  const { isWalletConnected } = useContext(AppContext);
-  const { isConnected } = isWalletConnected();
+  const { usersList } = useContext(UserContext);
+
+
+  // const { isWalletConnected } = useContext(AppContext);
+  // const { isConnected } = isWalletConnected();
   const [signer, setSigner] = useState<Signer>();
+  const [isConnected, setIsConnected] = useState(false);
+
+  const { currentUser } = useContext(AppContext);
+  // const { data: signer } = currentUser;
+  const address = currentUser;
 
   useEffect(() => {
     const connectWeb3 = async () => {
@@ -26,6 +35,7 @@ function ProductIndex() {
       const provider = new ethers.providers.Web3Provider(connection);
       const signer = provider.getSigner(); // Store the connection object in state
       setSigner(signer);
+      setIsConnected(true); // Set connected state
     };
 
     connectWeb3(); // Call the async function to connect
@@ -45,10 +55,6 @@ function ProductIndex() {
 
           const allItems = await contractInstance.getAllItems();
           const formattedItems = allItems.map((item: any) => formatItem(item));
-          console.log(
-            "🚀 ~ file: index.js:180 ~ getAllItems ~ formattedItems",
-            formattedItems
-          );
 
           setAllItems(formattedItems);
         } catch (error) {
@@ -71,10 +77,6 @@ function ProductIndex() {
 
         const myItems = await contractInstance.getMyItems();
         const formattedItems = myItems.map((item: any) => formatItem(item));
-        console.log(
-          "🚀 ~ file: index.js:191 ~ getMyItems ~ formattedItems",
-          formattedItems
-        );
 
         setMyItems(formattedItems);
       }
@@ -108,12 +110,15 @@ function ProductIndex() {
   }, [isConnected, signer]);
 
   const sellItem = async (data: { accountId: any; barcodeId: any }) => {
+      console.log(isConnected)
+    
     const { accountId, barcodeId } = data;
     console.log(
       "🚀 ~ file: index.js:247 ~ sellItem ~ accountId, barcodeId",
       accountId,
       barcodeId
     );
+
 
     try {
       if (isConnected) {
@@ -128,7 +133,10 @@ function ProductIndex() {
         const response = await contractInstance.sellItem(
           accountId,
           barcodeId,
-          currentTimestamp
+          currentTimestamp,{
+            gasPrice: ethers.utils.parseUnits('20', 'gwei'), // Specify gas price in gwei
+            gasLimit: 3000000, // Specify gas limit
+          }
         );
         console.log(
           "🚀 ~ file: ContextWrapper.js:247 ~ sellItem ~ response",
@@ -183,6 +191,7 @@ function ProductIndex() {
             modalItem={modalItem}
             shouldCloseOnOverlayClick={false}
             sellItem={sellItem}
+            usersList={usersList} // Pass usersList as a prop to the modal
           />
         )}
       </div>
